@@ -23,4 +23,6 @@ public interface ApplicationService {
     ApplicationDto accept(ApplicationDto applicationDto) throws InvalidStatusException;
 
     ApplicationDto publish(ApplicationDto applicationDto) throws InvalidStatusException;
+
+    ApplicationDto edit(ApplicationDto applicationDto, String content) throws InvalidStatusException;
 }

@@ -123,5 +123,21 @@ public class ApplicationServiceImpl implements ApplicationService {
         return ApplicationMapper.mapToApplicationDto(application);
     }
 
+    @Override
+    public ApplicationDto edit(ApplicationDto applicationDto, String content) throws InvalidStatusException{
+        if (applicationDto.getStatus() != ApplicationStatus.VERIFIED
+                && applicationDto.getStatus() != ApplicationStatus.CREATED){
+            throw new InvalidStatusException("Invalid application status:" + applicationDto.getStatus().toString());
+        }
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("Content is required");
+        }
+        applicationDto.setContent(content);
+        Application application = applicationRepository.save(ApplicationMapper.mapToApplication(applicationDto));
+        ApplicationChangeEvent event = ApplicationChangeEventMapper.mapToApplicationEvent(application, null);
+        eventRepository.save(event);
+        return ApplicationMapper.mapToApplicationDto(application);
+    }
+
 }
 

@@ -12,7 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.TestPropertySource;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -28,14 +29,12 @@ public class ApplicationControllerIntegrationTest {
 
     private final String testApp1Name = "testAppName1";
     private final String testApp1Content = "testApp1Content1";
+    private final String cause = "cause for delete and reject";
 
     @Test
     public void shouldCreateNewApplication() {
-        // Given
-        ApplicationDto applicationToBeCreated = ApplicationDto.builder().name(testApp1Name).content(testApp1Content).build();
-
         // When
-        ResponseEntity<ApplicationDto> response = template.postForEntity(getUrl("/applications"), applicationToBeCreated, ApplicationDto.class);
+        ResponseEntity<ApplicationDto> response = createApplicationForTest();
 
         // Then
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -61,9 +60,8 @@ public class ApplicationControllerIntegrationTest {
     @Test
     public void shouldFindCreatedApplication() {
         // Given
-        ApplicationDto applicationToBeCreated = ApplicationDto.builder().name(testApp1Name).content(testApp1Content).build();
-        ResponseEntity<ApplicationDto> postResponse = template.postForEntity(getUrl("/applications"), applicationToBeCreated, ApplicationDto.class);
-        String applicationId = postResponse.getBody().getId();
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
 
         // When
         ResponseEntity<ApplicationDto> response = template.getForEntity(getUrl("/applications/{id}"), ApplicationDto.class, applicationId);
@@ -93,11 +91,9 @@ public class ApplicationControllerIntegrationTest {
     @Test
     public void shouldFindDeletedApplicationWithCorrectStatus() {
         // Given
-        ApplicationDto applicationToBeCreated = ApplicationDto.builder().name(testApp1Name).content(testApp1Content).build();
-        ResponseEntity<ApplicationDto> postResponse = template.postForEntity(getUrl("/applications"), applicationToBeCreated, ApplicationDto.class);
-        String applicationId = postResponse.getBody().getId();
-        String cause = "cause for deletion";
-        template.postForEntity(getUrl("/delete-applications/{id}"), cause, String.class, applicationId);
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
+        template.postForEntity(getUrl("/delete-application/{id}"), cause, String.class, applicationId);
 
         // When
         ResponseEntity<ApplicationDto> response = template.getForEntity(getUrl("/applications/{id}"), ApplicationDto.class, applicationId);
@@ -109,6 +105,136 @@ public class ApplicationControllerIntegrationTest {
         assertEquals(applicationId, foundApplication.getId());
         assertEquals(ApplicationStatus.DELETED, foundApplication.getStatus());
     }
+
+    @Test
+    public void shouldFindRejectedApplicationWithCorrectStatus() {
+        // Given
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
+        template.postForEntity(getUrl("/verify-application/{id}"), null, String.class, applicationId);
+        template.postForEntity(getUrl("/reject-application/{id}"), cause, String.class, applicationId);
+
+        // When
+        ResponseEntity<ApplicationDto> response = template.getForEntity(getUrl("/applications/{id}"), ApplicationDto.class, applicationId);
+
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ApplicationDto foundApplication = response.getBody();
+        assertNotNull(foundApplication);
+        assertEquals(applicationId, foundApplication.getId());
+        assertEquals(ApplicationStatus.REJECTED, foundApplication.getStatus());
+    }
+
+    @Test
+    public void shouldVerifyApplicationWithCreatedStatus() {
+        // Given
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
+        template.postForEntity(getUrl("/verify-application/{id}"), null, String.class, applicationId);
+
+        // When
+        ResponseEntity<ApplicationDto> response = template.getForEntity(getUrl("/applications/{id}"), ApplicationDto.class, applicationId);
+
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ApplicationDto foundApplication = response.getBody();
+        assertNotNull(foundApplication);
+        assertEquals(applicationId, foundApplication.getId());
+        assertEquals(ApplicationStatus.VERIFIED, foundApplication.getStatus());
+    }
+
+    @Test
+    public void shouldEditApplicationWithCreatedStatus() {
+        //Given
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
+
+        //When
+        String newContent = "newContent";
+        ResponseEntity<ApplicationDto> response = template.postForEntity(getUrl("/applications/{id}"), newContent, ApplicationDto.class, applicationId);
+
+        //Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ApplicationDto foundApplication = response.getBody();
+        assertNotNull(foundApplication);
+        assertEquals(applicationId, foundApplication.getId());
+        assertEquals(newContent, response.getBody().getContent());
+    }
+
+    @Test
+    public void shouldAcceptApplicationWithVerifiedStatus() {
+        // Given
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
+        template.postForEntity(getUrl("/verify-application/{id}"), null, String.class, applicationId);
+        template.postForEntity(getUrl("/accept-application/{id}"), null, String.class, applicationId);
+
+        // When
+        ResponseEntity<ApplicationDto> response = template.getForEntity(getUrl("/applications/{id}"), ApplicationDto.class, applicationId);
+
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ApplicationDto foundApplication = response.getBody();
+        assertNotNull(foundApplication);
+        assertEquals(applicationId, foundApplication.getId());
+        assertEquals(ApplicationStatus.ACCEPTED, foundApplication.getStatus());
+    }
+
+    @Test
+    public void shouldRejectApplicationWithCorrectStatus() {
+        // Given
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
+        template.postForEntity(getUrl("/verify-application/{id}"), null, String.class, applicationId);
+        template.postForEntity(getUrl("/reject-application/{id}"), cause, String.class, applicationId);
+        // When
+        ResponseEntity<ApplicationDto> response = template.getForEntity(getUrl("/applications/{id}"), ApplicationDto.class, applicationId);
+
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ApplicationDto foundApplication = response.getBody();
+        assertNotNull(foundApplication);
+        assertEquals(applicationId, foundApplication.getId());
+        assertEquals(ApplicationStatus.REJECTED, foundApplication.getStatus());
+    }
+
+    @Test
+    public void shouldFindApplicationList() {
+        // Given
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+
+        // When
+        ResponseEntity<Object> response = template.postForEntity(getUrl("/applications"), applicationCreated, Object.class);
+
+        //Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    public void shouldPublishApplicationWithCorrectStatus() {
+        // Given
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
+        template.postForEntity(getUrl("/verify-application/{id}"), null, String.class, applicationId);
+        template.postForEntity(getUrl("/accept-application/{id}"), null, String.class, applicationId);
+        template.postForEntity(getUrl("/publish-application/{id}"), null, String.class, applicationId);
+
+        // When
+        ResponseEntity<ApplicationDto> response = template.getForEntity(getUrl("/applications/{id}"), ApplicationDto.class, applicationId);
+
+        // Then
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ApplicationDto foundApplication = response.getBody();
+        assertNotNull(foundApplication);
+        assertEquals(applicationId, foundApplication.getId());
+        assertEquals(ApplicationStatus.PUBLISHED, foundApplication.getStatus());
+    }
+
+    private ResponseEntity<ApplicationDto> createApplicationForTest() {
+        ApplicationDto applicationToBeCreated = ApplicationDto.builder().name(testApp1Name).content(testApp1Content).status(ApplicationStatus.CREATED).build();
+        return template.postForEntity(getUrl("/applications"), applicationToBeCreated, ApplicationDto.class);
+    }
+
     private String getUrl(String path) {
         return String.format("http://localhost:%d", port).concat(path);
     }

@@ -30,11 +30,19 @@ public class ApplicationController {
     }
 
     @GetMapping("/applications/{id}")
-    public ResponseEntity<ApplicationDto> editApplication(@PathVariable("id") String id) {
+    public ResponseEntity<ApplicationDto> getApplication(@PathVariable("id") String id) {
         ApplicationDto applicationDto = applicationService.findApplicationById(id);
         if (applicationDto == null)
             return ResponseEntity.notFound().build();
         return ResponseEntity.ok(applicationDto);
+    }
+
+    @PostMapping("/applications/{id}")
+    public ResponseEntity<ApplicationDto> editApplication(@PathVariable("id") String id, @Valid @RequestBody String content) throws InvalidStatusException{
+        ApplicationDto applicationDto = applicationService.findApplicationById(id);
+        if (applicationDto == null)
+            return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(applicationService.edit(applicationDto, content));
     }
 
     @PostMapping("/verify-application/{id}")
@@ -62,13 +70,12 @@ public class ApplicationController {
         return ResponseEntity.ok(applicationService.accept(applicationDto));
     }
 
-    @PostMapping("/delete-applications/{id}")
+    @PostMapping("/delete-application/{id}")
     public ResponseEntity<ApplicationDto> deleteApplication(@PathVariable("id") String id, @Valid @RequestBody String cause) throws InvalidStatusException {
         ApplicationDto applicationDto = applicationService.findApplicationById(id);
         if (applicationDto == null)
             return ResponseEntity.notFound().build();
         return ResponseEntity.ok(applicationService.delete(applicationDto.getId(), cause));
-
     }
 
     @PostMapping("/publish-application/{id}")
