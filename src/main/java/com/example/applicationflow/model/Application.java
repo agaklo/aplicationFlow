@@ -13,7 +13,7 @@ import lombok.*;
 public class Application {
 
     @Id
-    @Column(nullable = false, length = 36)
+    @Column( nullable = false, length = 36)
     private String id;
     @Column(nullable = false)
     private String name;

@@ -8,6 +8,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.TestPropertySource;
@@ -151,7 +153,8 @@ public class ApplicationControllerIntegrationTest {
 
         //When
         String newContent = "newContent";
-        ResponseEntity<ApplicationDto> response = template.postForEntity(getUrl("/applications/{id}"), newContent, ApplicationDto.class, applicationId);
+        HttpEntity<String> requestEntity = new HttpEntity<>(newContent);
+        ResponseEntity<ApplicationDto> response = template.exchange(getUrl("/applications/{id}/content"), HttpMethod.PUT, requestEntity, ApplicationDto.class, applicationId);
 
         //Then
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -160,6 +163,21 @@ public class ApplicationControllerIntegrationTest {
         assertEquals(applicationId, foundApplication.getId());
         assertEquals(newContent, response.getBody().getContent());
     }
+
+    @Test
+    public void shouldFailWhenEditApplicationWithoutContent() {
+        //Given
+        ResponseEntity<ApplicationDto> applicationCreated = createApplicationForTest();
+        String applicationId = applicationCreated.getBody().getId();
+
+        //When
+        HttpEntity<String> requestEntity = new HttpEntity<>("");
+        ResponseEntity<?> response = template.exchange(getUrl("/applications/{id}/content"), HttpMethod.PUT, requestEntity, Object.class, applicationId);
+
+        //Then
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
 
     @Test
     public void shouldAcceptApplicationWithVerifiedStatus() {

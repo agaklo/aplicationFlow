@@ -5,6 +5,7 @@ import com.example.applicationflow.model.ApplicationDto;
 
 public class ApplicationMapper {
 
+    private ApplicationMapper() {}
 
     public static ApplicationDto mapToApplicationDto(Application application) {
         return ApplicationDto.builder()

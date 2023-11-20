@@ -37,8 +37,8 @@ public class ApplicationController {
         return ResponseEntity.ok(applicationDto);
     }
 
-    @PostMapping("/applications/{id}")
-    public ResponseEntity<ApplicationDto> editApplication(@PathVariable("id") String id, @Valid @RequestBody String content) throws InvalidStatusException{
+    @PutMapping("/applications/{id}/content")
+    public ResponseEntity<ApplicationDto> editApplicationContent(@PathVariable("id") String id, @Valid @RequestBody String content) throws InvalidStatusException{
         ApplicationDto applicationDto = applicationService.findApplicationById(id);
         if (applicationDto == null)
             return ResponseEntity.notFound().build();
