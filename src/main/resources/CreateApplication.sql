@@ -1,9 +1,3 @@
--- INSERT INTO applications
---             select id, name, content, status
---             from (
---                 select `1`, `appName1`, `appContent1`, `CREATED`)
---                 as t
---             where not exists (select * from applications where id = t.id);
 INSERT INTO applications
             (id, name, content, status)
             select '1', 'appName1', 'appContent1', 'CREATED'
